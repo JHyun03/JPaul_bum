@@ -5,11 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>당근 사진 마을 전시회</title>
   <meta name="description" content="당근 사진 동호회 회원들의 사진을 아늑한 마을에서 산책하며 감상하는 온라인 전시회">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
+  <meta name="theme-color" content="#ff7a2f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <!-- iOS 홈 화면 앱 -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="사진마을">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -24,6 +32,7 @@
       <p class="title-sub">우리 동네에서 찍은 사진들이 마을 광장에 걸려 있어요</p>
       <div class="title-chars" id="title-chars"></div>
       <button class="btn btn-big" id="start-btn">마을로 들어가기</button>
+      <button class="btn btn-ghost install-btn" id="install-btn" hidden>📲 휴대폰에 앱으로 설치</button>
     </div>
     <div class="hills"></div>
   </section>
@@ -63,6 +72,7 @@
         <button class="btn btn-ghost" id="list-btn">🗂 모아보기</button>
       </div>
     </header>
+    <p class="demo-banner" id="demo-banner" hidden>체험 모드 · 사진이 이 기기에만 저장돼요</p>
 
     <div class="hint" id="hint" hidden></div>
     <p class="controls-help"><span class="for-keys">방향키·WASD 또는 화면을 눌러 이동 · 액자 앞에서 Space/E로 감상</span><span class="for-touch">가고 싶은 곳을 눌러 이동 · 액자를 누르면 감상</span></p>
@@ -94,9 +104,9 @@
     <form id="upload-form" class="upload-form">
       <h3>📷 마을 광장에 작품 걸기</h3>
       <label class="dropzone" id="dropzone">
-        <input type="file" name="photo" id="photo-input" accept="image/jpeg,image/png,image/webp,image/gif" required>
+        <input type="file" name="photo" id="photo-input" accept="image/*" required>
         <img id="preview" alt="" hidden>
-        <span id="drop-text">사진을 끌어놓거나 눌러서 선택하세요<br><small>JPG · PNG · WEBP · GIF / 최대 10MB</small></span>
+        <span id="drop-text">사진을 끌어놓거나 눌러서 선택하세요<br><small>올릴 때 자동으로 알맞은 크기로 줄여 드려요</small></span>
       </label>
       <label class="field"><span>작품 제목</span><input name="title" maxlength="40" required placeholder="예) 퇴근길 한강 노을"></label>
       <label class="field" id="club-code-field" hidden><span>동호회 입장 코드</span><input name="clubCode" id="club-code" autocomplete="off" placeholder="운영진에게 받은 코드"></label>
@@ -123,9 +133,22 @@
     <div class="list-grid" id="list-grid"></div>
   </dialog>
 
+  <!-- 앱 설치 안내 (iPhone/iPad) -->
+  <dialog id="install-modal" class="modal">
+    <div class="upload-form">
+      <h3>📲 홈 화면에 앱 추가하기</h3>
+      <ol class="install-steps" id="install-steps"></ol>
+      <div class="view-actions"><button class="btn btn-ghost" data-close>알겠어요</button></div>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status"></div>
 
-  <script src="/js/characters.js"></script>
-  <script src="/js/app.js"></script>
+  <script src="config.js"></script>
+  <script src="vendor/supabase-2.118.0.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/install.js"></script>
 </body>
 </html>

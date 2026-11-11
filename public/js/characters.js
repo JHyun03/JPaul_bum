@@ -1,6 +1,6 @@
 // 마을 주민 캐릭터 (오리지널 SVG 일러스트)
 // 공식 캐릭터 이미지를 쓸 권한이 있다면 각 캐릭터의 `image`에 경로를 넣으세요.
-// 예: image: '/characters/official-1.png'  → SVG 대신 그 이미지가 쓰입니다.
+// 예: image: 'characters/official-1.png'  → SVG 대신 그 이미지가 쓰입니다.
 
 const face = (y = 62, blush = '#ff9e9e') => `
   <ellipse cx="38" cy="${y}" rx="4.2" ry="5" fill="#3b2a20"/>

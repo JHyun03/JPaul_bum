@@ -345,3 +345,16 @@ kbd { font-family: 'Jua', sans-serif; padding: 1px 7px; border-radius: 6px; back
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- 앱 설치 / 체험 모드 ---------- */
+.install-btn { display: block; margin: 14px auto 0; font-size: 16px; }
+.install-steps { margin: 0; padding-left: 22px; line-height: 1.7; display: grid; gap: 10px; }
+.install-steps b { color: var(--carrot-dark); }
+.ios-share { display: inline-block; padding: 0 6px; border: 2px solid currentColor; border-radius: 6px; font-size: 13px; }
+.demo-banner {
+  position: absolute; left: 50%; top: max(78px, calc(env(safe-area-inset-top) + 70px)); translate: -50% 0; margin: 0;
+  padding: 5px 14px; border-radius: 999px; background: #fff3a0; color: var(--ink); font-size: 13px; z-index: 9;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1); white-space: nowrap; pointer-events: none;
+}
+/* 앱으로 실행 시 아이폰 노치/홈바 여백 */
+.dialog { bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px)); }

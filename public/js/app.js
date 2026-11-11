@@ -21,36 +21,8 @@
       localStorage.setItem(STORE_KEY, JSON.stringify(r));
     } catch {}
   }
-  const newKey = () =>
-    crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
-
-  const CODE_KEY = 'carrot-photo-village:club-code';
-  let clubCode = '';
-  try {
-    clubCode = localStorage.getItem(CODE_KEY) || '';
-  } catch {}
-  let requiresCode = false;
-  fetch('/api/config')
-    .then((r) => r.json())
-    .then((c) => (requiresCode = !!c.requiresCode))
-    .catch(() => {});
-
+  const store = window.photoStore;
   let resident = loadResident();
-  const ownerKey = resident?.ownerKey || newKey();
-
-  // ---------- API ----------
-  async function api(path, opts = {}) {
-    const headers = { 'X-Owner-Key': ownerKey, ...(opts.headers || {}) };
-    if (clubCode) headers['X-Club-Code'] = encodeURIComponent(clubCode);
-    const res = await fetch(path, { ...opts, headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const err = new Error(data.error || '문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
-      err.code = data.code;
-      throw err;
-    }
-    return data;
-  }
 
   // ---------- 공통 UI ----------
   function show(id) {
@@ -113,7 +85,7 @@
       return;
     }
     const first = !resident;
-    resident = { nickname, character: picked, ownerKey };
+    resident = { nickname, character: picked };
     saveResident(resident);
     enterVillage(first);
   }
@@ -220,8 +192,12 @@
     if (!b) return;
     e.stopPropagation();
     const spot = spots[+b.dataset.index];
-    walkTo(spot.x, spot.y + 95, () => interact(spot));
+    walkTo(...standSpot(spot), () => interact(spot));
   });
+
+  // 액자를 가리지 않도록 액자 오른쪽 아래에 서요.
+  const standSpot = (spot) => [spot.x + 108, spot.y + 175];
+  const actKey = matchMedia('(hover: none)').matches ? '👆' : '<kbd>Space</kbd>';
 
   function interact(spot) {
     if (!spot) return;
@@ -238,8 +214,7 @@
 
   async function refresh() {
     try {
-      const data = await api('/api/photos');
-      photos = data.photos;
+      photos = await store.list();
     } catch (err) {
       toast(err.message);
     }
@@ -249,6 +224,7 @@
 
   function enterVillage(first = false) {
     renderPlayer();
+    $('#demo-banner').hidden = store.mode !== 'demo';
     show('village');
     refresh().then(() => {
       if (!villageStarted) {
@@ -359,9 +335,9 @@
 
     // 가까운 액자 찾기
     let best = null;
-    let bestD = 110;
+    let bestD = 150;
     for (const s of spots) {
-      const d = Math.hypot(s.x - player.x, s.y + 80 - player.y);
+      const d = Math.hypot(s.x - player.x, s.y + 120 - player.y);
       if (d < bestD) {
         bestD = d;
         best = s;
@@ -374,8 +350,8 @@
       if (best) {
         $(`.easel[data-index="${best.index}"]`)?.classList.add('near');
         hint.innerHTML = best.photo
-          ? `<b>「${esc(best.photo.title)}」</b> ${esc(best.photo.nickname)} · <kbd>Space</kbd> 감상하기`
-          : `빈 액자예요 · <kbd>Space</kbd> 내 작품 걸기`;
+          ? `<b>「${esc(best.photo.title)}」</b> ${esc(best.photo.nickname)} · ${actKey} 감상하기`
+          : `빈 액자예요 · ${actKey} 내 작품 걸기`;
         hint.hidden = false;
       } else hint.hidden = true;
     }
@@ -446,18 +422,20 @@
   }
   $('#like-btn').addEventListener('click', async () => {
     try {
-      const { photo } = await api(`/api/photos/${viewing.id}/like`, { method: 'POST' });
-      Object.assign(viewing, photo);
+      $('#like-btn').disabled = true;
+      await store.toggleLike(viewing);
       updateLike(viewing);
       renderEasels();
     } catch (err) {
       toast(err.message);
+    } finally {
+      $('#like-btn').disabled = false;
     }
   });
   $('#delete-btn').addEventListener('click', async () => {
     if (!confirm(`「${viewing.title}」 작품을 광장에서 내릴까요?`)) return;
     try {
-      await api(`/api/photos/${viewing.id}`, { method: 'DELETE' });
+      await store.remove(viewing);
       $('#view-modal').close();
       toast('작품을 내렸어요.');
       refresh();
@@ -469,14 +447,21 @@
   // ---------- 업로드 ----------
   const form = $('#upload-form');
   const fileInput = $('#photo-input');
+  function setCodeField(visible) {
+    $('#club-code-field').hidden = !visible;
+    $('#club-code').required = visible;
+  }
   function openUpload() {
     form.reset();
     $('#preview').hidden = true;
     $('#drop-text').hidden = false;
     $('#upload-error').textContent = '';
-    $('#club-code-field').hidden = !(requiresCode && !clubCode);
-    $('#club-code').required = !$('#club-code-field').hidden;
+    setCodeField(false);
     $('#upload-modal').showModal();
+    // 아직 회원 인증 전이고 코드가 필요한 마을이면 코드 입력칸을 보여줘요.
+    Promise.all([store.isMember(), store.requiresCode()])
+      .then(([member, needs]) => setCodeField(!member && needs))
+      .catch(() => {});
   }
   $('#upload-btn').addEventListener('click', openUpload);
   fileInput.addEventListener('change', () => {
@@ -507,34 +492,32 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
-    const typedCode = String(fd.get('clubCode') || '').trim();
-    fd.delete('clubCode');
-    if (typedCode) clubCode = typedCode;
-    fd.append('nickname', resident.nickname);
-    fd.append('character', resident.character);
+    const file = fileInput.files[0];
+    if (!file) {
+      $('#upload-error').textContent = '사진을 선택해 주세요.';
+      return;
+    }
     const btn = $('#upload-submit');
     btn.disabled = true;
     btn.textContent = '거는 중…';
     $('#upload-error').textContent = '';
     try {
-      const { photo } = await api('/api/photos', { method: 'POST', body: fd });
-      try {
-        if (clubCode) localStorage.setItem(CODE_KEY, clubCode);
-      } catch {}
+      const photo = await store.add({
+        file,
+        title: String(fd.get('title')).trim().slice(0, 40),
+        description: String(fd.get('description') || '').trim().slice(0, 300),
+        nickname: resident.nickname,
+        character: resident.character,
+        code: String(fd.get('clubCode') || '').trim(),
+      });
       $('#upload-modal').close();
       await refresh();
       const spot = spots.find((s) => s.photo?.id === photo.id);
-      if (spot) walkTo(spot.x, spot.y + 95);
+      if (spot) walkTo(...standSpot(spot));
       say('안내원 당근이', [`「${photo.title}」 작품이 광장에 걸렸어요! 다른 주민들도 곧 구경하러 올 거예요.`]);
     } catch (err) {
       if (err.code === 'CLUB_CODE') {
-        clubCode = '';
-        try {
-          localStorage.removeItem(CODE_KEY);
-        } catch {}
-        requiresCode = true;
-        $('#club-code-field').hidden = false;
-        $('#club-code').required = true;
+        setCodeField(true);
         $('#club-code').focus();
       }
       $('#upload-error').textContent = err.message;
@@ -581,8 +564,7 @@
     const spot = spots.find((s) => s.photo?.id === p.id);
     $('#list-modal').close();
     if (spot) {
-      player.x = spot.x;
-      player.y = spot.y + 95;
+      [player.x, player.y] = standSpot(spot);
       target = null;
     }
     openView(p);

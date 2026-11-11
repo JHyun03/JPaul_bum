@@ -1,53 +1,85 @@
-# 🚀 배포 가이드 (Render)
+# 🥕 무료로 배포하기 (GitHub Pages + Supabase)
 
-예상 비용: **월 약 $7.25** (Starter 서버 $7 + 1GB 디스크 $0.25)
-사진과 작품 정보는 영구 디스크(`/var/data`)에 저장돼서 재배포·재시작해도 지워지지 않아요.
+비용 **0원**. 안드로이드·아이폰 모두 **홈 화면에 앱으로 설치**해서 쓸 수 있어요.
 
-## 1. Render 가입
-1. https://render.com 에 접속해 **GitHub 계정으로 가입**합니다.
-2. 결제 카드를 등록합니다 (영구 디스크는 유료 플랜에서만 쓸 수 있어요).
+| 역할 | 서비스 | 무료 한도 |
+|---|---|---|
+| 앱 화면 호스팅 | GitHub Pages | 공개 저장소면 무료 |
+| 사진 저장 | Supabase Storage | 1GB (사진은 자동으로 줄여서 올라가 약 3,000~4,000장) |
+| 작품 정보·좋아요 | Supabase Database | 500MB |
 
-## 2. Blueprint로 한 번에 만들기
-1. Render 대시보드 오른쪽 위 **New + → Blueprint** 를 누릅니다.
-2. GitHub 저장소 `JPaul_bum` 을 연결합니다. (목록에 없으면 *Configure GitHub* 에서 저장소 접근을 허용)
-3. 브랜치를 고릅니다. 이 코드를 `main`에 합친 뒤 `main`을 고르는 걸 추천해요.
-4. Render가 `render.yaml`을 읽어 아래 설정을 자동으로 채워요.
-   - 서버: Node 22, Starter, 싱가포르 리전 (한국에서 가장 가까움)
-   - 디스크: `photos` 1GB → `/var/data`
-5. **CLUB_CODE** 입력칸이 나오면 동호회 입장 코드를 정해 넣으세요. (예: `당근사진2026`)
-   - 이 코드를 아는 사람만 작품을 걸 수 있어요. 감상은 누구나 가능해요.
-   - 비워두면 링크를 아는 누구나 사진을 올릴 수 있어요.
-6. **Apply** 를 누르면 몇 분 뒤 `https://carrot-photo-village.onrender.com` 같은 주소가 생겨요.
-
-## 3. 회원들에게 공유
-- 사이트 주소 + 입장 코드를 동호회 단톡방/공지에 올리면 끝!
-- 처음 작품을 걸 때만 코드를 물어보고, 그 다음부터는 브라우저에 기억돼요.
-
-## 운영 팁
-- **코드 바꾸기**: Render → 서비스 → *Environment* → `CLUB_CODE` 수정 → 저장하면 자동 재시작.
-- **용량 늘리기**: *Disks* 에서 크기를 키울 수 있어요 (줄이는 건 안 돼요). 사진 10MB × 100장 ≈ 1GB.
-- **백업**: *Shell* 탭에서 `ls /var/data/uploads` 로 확인. Render는 디스크 스냅샷을 매일 자동으로 만들어 줘요.
-- **내 도메인 연결**: *Settings → Custom Domains* 에서 추가.
-- **업데이트**: 연결한 브랜치에 코드를 푸시하면 자동으로 다시 배포돼요.
-- **부적절한 사진 지우기**: 지금은 올린 사람만 내릴 수 있어요. 운영진용 삭제 기능이 필요하면 말씀해 주세요.
+> 💡 앱스토어/플레이스토어 등록은 비용이 들어서(애플 연 $99, 구글 $25) 대신 **설치형 웹앱(PWA)** 으로 만들었어요.
+> 홈 화면 아이콘으로 열면 주소창 없이 전체 화면 앱처럼 실행돼요.
 
 ---
 
-## 다른 곳에 배포하고 싶다면 (Docker)
-`Dockerfile`이 들어 있어서 VPS나 Fly.io 등 Docker가 되는 곳이면 어디든 띄울 수 있어요.
-사진은 컨테이너의 `/data`에 저장되니 꼭 볼륨을 연결하세요.
+## 1단계. Supabase 만들기 (10분)
+
+1. https://supabase.com → **Start your project** → GitHub 계정으로 가입
+2. **New project**
+   - Name: `carrot-photo-village`
+   - Database Password: 아무거나 (따로 적어두기만 하세요)
+   - Region: **Northeast Asia (Seoul)**
+   - Plan: **Free**
+3. 프로젝트가 만들어지면 왼쪽 메뉴 **SQL Editor** → 이 저장소의 [`supabase/setup.sql`](supabase/setup.sql) 내용을 **전부 복사해 붙여넣고 Run**
+   - "Success" 가 나오면 성공이에요.
+4. (선택) **동호회 입장 코드** 정하기 — SQL Editor에서 아래 한 줄을 코드만 바꿔 실행:
+   ```sql
+   update public.settings set club_code = '당근사진2026' where id = 1;
+   ```
+   코드를 아는 회원만 작품을 걸 수 있어요. 감상은 누구나 가능해요. (안 하면 누구나 업로드 가능)
+5. 왼쪽 메뉴 **Authentication → Sign In / Providers** (또는 Providers) → **Allow anonymous sign-ins** 를 **켜고 저장**
+   - 회원가입 없이 기기별로 "주민"을 구분하는 데 써요. **꼭 켜야 업로드/좋아요가 돼요!**
+6. **Project Settings → API Keys** (또는 Data API) 에서 두 가지를 복사해 두세요.
+   - **Project URL** (예: `https://abcdxyz.supabase.co`)
+   - **anon public** 키 또는 **Publishable** 키
+   - ⚠️ `service_role` / `secret` 키는 절대 쓰지 마세요.
+
+## 2단계. 앱에 연결하기 (2분)
+
+1. GitHub에서 이 저장소의 `public/config.js` 파일을 열고 연필(✏️) 버튼으로 수정
+2. 복사한 값을 붙여넣기:
+   ```js
+   window.APP_CONFIG = {
+     SUPABASE_URL: 'https://abcdxyz.supabase.co',
+     SUPABASE_KEY: 'eyJhbGciOi... 또는 sb_publishable_...',
+   };
+   ```
+3. **Commit changes** (main 브랜치에 바로 저장)
+
+> anon/publishable 키는 원래 앱에 공개로 들어가는 키라 괜찮아요. 데이터는 `setup.sql`의 보안 규칙으로 보호돼요.
+
+## 3단계. GitHub Pages 켜기 (1분)
+
+1. 저장소 **Settings → Pages**
+2. **Build and deployment → Source** 를 **GitHub Actions** 로 선택
+3. **Actions** 탭에서 "Deploy to GitHub Pages" 가 초록색 ✅ 이 되면 완료!
+   - 안 돌았다면 Actions → Deploy to GitHub Pages → **Run workflow**
+4. 주소: **https://jhyun03.github.io/JPaul_bum/**
+
+## 4단계. 회원들에게 공유 📲
+
+단톡방에 주소(+입장 코드)를 올리고 이렇게 안내하세요. 앱 첫 화면의 **"📲 휴대폰에 앱으로 설치"** 버튼을 누르면 기기에 맞는 설치 방법이 나와요.
+
+- **아이폰**: Safari로 열기 → 공유 버튼(⬆︎) → **홈 화면에 추가**
+- **안드로이드**: Chrome으로 열기 → ⋮ 메뉴 → **앱 설치** (또는 홈 화면에 추가)
+- 카카오톡에서 링크를 누르면 카톡 안 브라우저로 열려요. **다른 브라우저로 열기**를 먼저 해 주세요.
+
+---
+
+## 운영 팁
+
+- **부적절한 사진 지우기 (운영진)**: Supabase → **Table Editor → photos** 에서 해당 줄 삭제 → **Storage → photos** 에서 같은 경로의 파일 삭제
+- **입장 코드 바꾸기**: 1단계 4번의 SQL을 새 코드로 다시 실행 (이미 인증한 기기는 계속 업로드 가능)
+- **잠자기 방지**: Supabase 무료 프로젝트는 1주일간 아무도 안 쓰면 일시정지돼요. 저장소에 들어 있는 `Keep Supabase awake` 작업이 3일마다 자동으로 깨워줘요.
+  - 저장소에 60일 동안 아무 변화가 없으면 GitHub이 이 자동 작업을 멈출 수 있어요. 그땐 Actions 탭에서 다시 켜 주세요.
+  - 혹시 일시정지됐다면 Supabase 대시보드에서 **Restore project** 를 누르면 돼요 (데이터는 그대로).
+- **사용량 확인**: Supabase → **Settings → Usage** 에서 저장 공간을 볼 수 있어요.
+- **앱 업데이트**: main 브랜치에 코드가 올라가면 자동 배포되고, 회원들 앱도 다음 실행 때 자동으로 새 버전이 돼요.
+
+## 내 컴퓨터에서 미리 보기
 
 ```bash
-docker build -t carrot-photo-village .
-docker run -d --name cpv -p 80:3000 \
-  -v cpv-data:/data \
-  -e CLUB_CODE=당근사진2026 \
-  --restart unless-stopped carrot-photo-village
+npm start   # http://localhost:3000
 ```
-
-### 환경 변수
-| 이름 | 설명 | 기본값 |
-|---|---|---|
-| `PORT` | 서버 포트 | `3000` |
-| `STORAGE_DIR` | 사진/데이터 저장 위치 (영구 디스크 경로) | 프로젝트 폴더 |
-| `CLUB_CODE` | 작품을 걸 때 필요한 입장 코드 (비우면 누구나) | 없음 |
+`config.js`가 비어 있으면 **체험 모드**로 동작해요 (사진이 그 기기에만 저장).

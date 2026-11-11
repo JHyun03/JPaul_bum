@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>당근 사진 마을 전시회</title>
+  <meta name="description" content="당근 사진 동호회 회원들의 사진을 아늑한 마을에서 산책하며 감상하는 온라인 전시회">
+  <meta name="theme-color" content="#ff7a2f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <!-- iOS 홈 화면 앱 -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="사진마을">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 1. 타이틀 -->
+  <section id="title-screen" class="screen active">
+    <div class="sky">
+      <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+    </div>
+    <div class="title-card">
+      <p class="title-kicker">당근 사진 동호회</p>
+      <h1>사진 마을 전시회</h1>
+      <p class="title-sub">우리 동네에서 찍은 사진들이 마을 광장에 걸려 있어요</p>
+      <div class="title-chars" id="title-chars"></div>
+      <button class="btn btn-big" id="start-btn">마을로 들어가기</button>
+      <button class="btn btn-ghost install-btn" id="install-btn" hidden>📲 휴대폰에 앱으로 설치</button>
+    </div>
+    <div class="hills"></div>
+  </section>
+
+  <!-- 2. 캐릭터 선택 -->
+  <section id="select-screen" class="screen">
+    <div class="panel select-panel">
+      <h2>어떤 주민으로 입장할까요?</h2>
+      <div class="char-grid" id="char-grid" role="radiogroup" aria-label="캐릭터 선택"></div>
+      <div class="char-detail" id="char-detail"></div>
+      <label class="field">
+        <span>마을에서 쓸 닉네임</span>
+        <input id="nickname-input" maxlength="16" placeholder="예) 노을사냥꾼" autocomplete="nickname">
+      </label>
+      <button class="btn btn-big" id="enter-btn">이 주민으로 입장</button>
+    </div>
+  </section>
+
+  <!-- 3. 마을 -->
+  <section id="village" class="screen">
+    <div id="viewport">
+      <div id="world">
+        <div id="decor"></div>
+        <div id="easels"></div>
+        <div id="player"><div class="shadow"></div><div class="body"></div><div class="name-tag"></div></div>
+        <div id="tap-marker"></div>
+      </div>
+    </div>
+
+    <header class="hud">
+      <button class="resident-card" id="resident-card" title="캐릭터 바꾸기">
+        <span class="resident-avatar" id="hud-avatar"></span>
+        <span><small>주민</small><b id="hud-name"></b></span>
+      </button>
+      <div class="hud-actions">
+        <button class="btn" id="upload-btn">📷 작품 걸기</button>
+        <button class="btn btn-ghost" id="list-btn">🗂 모아보기</button>
+      </div>
+    </header>
+    <p class="demo-banner" id="demo-banner" hidden>체험 모드 · 사진이 이 기기에만 저장돼요</p>
+
+    <div class="hint" id="hint" hidden></div>
+    <p class="controls-help"><span class="for-keys">방향키·WASD 또는 화면을 눌러 이동 · 액자 앞에서 Space/E로 감상</span><span class="for-touch">가고 싶은 곳을 눌러 이동 · 액자를 누르면 감상</span></p>
+
+    <div class="dialog" id="dialog" hidden>
+      <div class="dialog-who" id="dialog-who"></div>
+      <p id="dialog-text"></p>
+      <span class="dialog-next">▼</span>
+    </div>
+  </section>
+
+  <!-- 작품 감상 -->
+  <dialog id="view-modal" class="modal">
+    <div class="frame-wrap"><img id="view-img" alt=""></div>
+    <div class="view-info">
+      <h3 id="view-title"></h3>
+      <p class="view-artist" id="view-artist"></p>
+      <p class="view-desc" id="view-desc"></p>
+      <div class="view-actions">
+        <button class="btn btn-like" id="like-btn">♡ <span></span></button>
+        <button class="btn btn-danger" id="delete-btn" hidden>작품 내리기</button>
+        <button class="btn btn-ghost" data-close>닫기</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 업로드 -->
+  <dialog id="upload-modal" class="modal">
+    <form id="upload-form" class="upload-form">
+      <h3>📷 마을 광장에 작품 걸기</h3>
+      <label class="dropzone" id="dropzone">
+        <input type="file" name="photo" id="photo-input" accept="image/*" required>
+        <img id="preview" alt="" hidden>
+        <span id="drop-text">사진을 끌어놓거나 눌러서 선택하세요<br><small>올릴 때 자동으로 알맞은 크기로 줄여 드려요</small></span>
+      </label>
+      <label class="field"><span>작품 제목</span><input name="title" maxlength="40" required placeholder="예) 퇴근길 한강 노을"></label>
+      <label class="field" id="club-code-field" hidden><span>동호회 입장 코드</span><input name="clubCode" id="club-code" autocomplete="off" placeholder="운영진에게 받은 코드"></label>
+      <label class="field"><span>작품 이야기 (선택)</span><textarea name="description" maxlength="300" rows="3" placeholder="언제, 어디서, 어떤 마음으로 찍었나요?"></textarea></label>
+      <p class="form-error" id="upload-error" role="alert"></p>
+      <div class="view-actions">
+        <button class="btn" type="submit" id="upload-submit">걸기</button>
+        <button class="btn btn-ghost" type="button" data-close>취소</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 모아보기 -->
+  <dialog id="list-modal" class="modal modal-wide">
+    <div class="list-head">
+      <h3>🗂 전시 작품 모아보기 <small id="list-count"></small></h3>
+      <div class="list-filter">
+        <button class="chip active" data-filter="all">전체</button>
+        <button class="chip" data-filter="mine">내 작품</button>
+        <button class="chip" data-filter="popular">인기순</button>
+      </div>
+      <button class="btn btn-ghost" data-close>닫기</button>
+    </div>
+    <div class="list-grid" id="list-grid"></div>
+  </dialog>
+
+  <!-- 앱 설치 안내 (iPhone/iPad) -->
+  <dialog id="install-modal" class="modal">
+    <div class="upload-form">
+      <h3>📲 홈 화면에 앱 추가하기</h3>
+      <ol class="install-steps" id="install-steps"></ol>
+      <div class="view-actions"><button class="btn btn-ghost" data-close>알겠어요</button></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="config.js"></script>
+  <script src="vendor/supabase-2.118.0.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/install.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "carrot-photo-village",
+  "version": "2.0.0",
+  "description": "당근 사진 동호회 온라인 전시회 - 설치형 웹앱(PWA), GitHub Pages + Supabase 무료 구성",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes serve@14.2.4 public -l 3000"
+  }
+}

@@ -24,14 +24,31 @@
   const newKey = () =>
     crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
 
+  const CODE_KEY = 'carrot-photo-village:club-code';
+  let clubCode = '';
+  try {
+    clubCode = localStorage.getItem(CODE_KEY) || '';
+  } catch {}
+  let requiresCode = false;
+  fetch('/api/config')
+    .then((r) => r.json())
+    .then((c) => (requiresCode = !!c.requiresCode))
+    .catch(() => {});
+
   let resident = loadResident();
   const ownerKey = resident?.ownerKey || newKey();
 
   // ---------- API ----------
   async function api(path, opts = {}) {
-    const res = await fetch(path, { ...opts, headers: { 'X-Owner-Key': ownerKey, ...(opts.headers || {}) } });
+    const headers = { 'X-Owner-Key': ownerKey, ...(opts.headers || {}) };
+    if (clubCode) headers['X-Club-Code'] = encodeURIComponent(clubCode);
+    const res = await fetch(path, { ...opts, headers });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+    if (!res.ok) {
+      const err = new Error(data.error || '문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+      err.code = data.code;
+      throw err;
+    }
     return data;
   }
 
@@ -457,6 +474,8 @@
     $('#preview').hidden = true;
     $('#drop-text').hidden = false;
     $('#upload-error').textContent = '';
+    $('#club-code-field').hidden = !(requiresCode && !clubCode);
+    $('#club-code').required = !$('#club-code-field').hidden;
     $('#upload-modal').showModal();
   }
   $('#upload-btn').addEventListener('click', openUpload);
@@ -488,6 +507,9 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
+    const typedCode = String(fd.get('clubCode') || '').trim();
+    fd.delete('clubCode');
+    if (typedCode) clubCode = typedCode;
     fd.append('nickname', resident.nickname);
     fd.append('character', resident.character);
     const btn = $('#upload-submit');
@@ -496,12 +518,25 @@
     $('#upload-error').textContent = '';
     try {
       const { photo } = await api('/api/photos', { method: 'POST', body: fd });
+      try {
+        if (clubCode) localStorage.setItem(CODE_KEY, clubCode);
+      } catch {}
       $('#upload-modal').close();
       await refresh();
       const spot = spots.find((s) => s.photo?.id === photo.id);
       if (spot) walkTo(spot.x, spot.y + 95);
       say('안내원 당근이', [`「${photo.title}」 작품이 광장에 걸렸어요! 다른 주민들도 곧 구경하러 올 거예요.`]);
     } catch (err) {
+      if (err.code === 'CLUB_CODE') {
+        clubCode = '';
+        try {
+          localStorage.removeItem(CODE_KEY);
+        } catch {}
+        requiresCode = true;
+        $('#club-code-field').hidden = false;
+        $('#club-code').required = true;
+        $('#club-code').focus();
+      }
       $('#upload-error').textContent = err.message;
     } finally {
       btn.disabled = false;

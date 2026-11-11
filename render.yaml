@@ -1,0 +1,23 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# 사진/데이터가 재배포 후에도 남도록 영구 디스크(/var/data)를 붙입니다.
+# 영구 디스크는 유료 인스턴스(Starter 이상)에서만 쓸 수 있어요.
+services:
+  - type: web
+    name: carrot-photo-village
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: STORAGE_DIR
+        value: /var/data
+      - key: CLUB_CODE
+        sync: false   # 배포할 때 Render 화면에서 직접 입력 (비워두면 누구나 업로드 가능)
+    disk:
+      name: photos
+      mountPath: /var/data
+      sizeGB: 1

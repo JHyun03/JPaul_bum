@@ -35,6 +35,9 @@ uploads/               업로드된 사진 (자동 생성)
 사용 허락을 받은 다른 캐릭터 이미지가 있다면 `public/characters/`에 넣고
 `public/js/characters.js`에서 해당 캐릭터에 `image: '/characters/파일명.png'`을 추가하면 SVG 대신 그 이미지가 쓰입니다.
 
+## 배포
+Render에 바로 배포할 수 있도록 `render.yaml`이 들어 있어요. 자세한 방법은 **[DEPLOY.md](DEPLOY.md)** 를 보세요.
+`CLUB_CODE` 환경 변수를 설정하면 입장 코드를 아는 회원만 작품을 걸 수 있어요.
+
 ## 참고
 - 로그인 없이 브라우저마다 고유한 주민 키를 저장해 "내 작품"을 구분합니다. 다른 브라우저/기기에서는 기존 작품을 내릴 수 없어요.
-- 배포 시 `data/`와 `uploads/` 폴더가 유지되는 서버(예: VPS, Render 디스크, Fly.io 볼륨)를 사용하세요.

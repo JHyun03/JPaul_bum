@@ -10,8 +10,12 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, 'data');
-const UPLOAD_DIR = path.join(ROOT, 'uploads');
+// 배포 시 STORAGE_DIR을 영구 디스크 경로(예: /var/data)로 지정하세요.
+const STORAGE_DIR = process.env.STORAGE_DIR ? path.resolve(process.env.STORAGE_DIR) : ROOT;
+const DATA_DIR = path.join(STORAGE_DIR, 'data');
+const UPLOAD_DIR = path.join(STORAGE_DIR, 'uploads');
+// 설정하면 이 코드를 아는 사람만 작품을 걸 수 있어요 (동호회 입장 코드).
+const CLUB_CODE = (process.env.CLUB_CODE || '').trim();
 const DB_FILE = path.join(DATA_DIR, 'photos.json');
 const MAX_FILE_MB = 10;
 const CHARACTERS = ['carrot', 'bunny', 'radish', 'potato', 'squirrel', 'hedgehog'];
@@ -75,6 +79,7 @@ const upload = multer({
 // ---------- 앱 ----------
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(ROOT, 'public')));
 app.use(
@@ -87,6 +92,19 @@ app.use(
 
 const ownerKeyOf = (req) => clean(req.get('X-Owner-Key'), 100) || null;
 
+function codeOk(req) {
+  if (!CLUB_CODE) return true;
+  let raw = req.get('X-Club-Code') || '';
+  try {
+    raw = decodeURIComponent(raw);
+  } catch {}
+  const given = Buffer.from(hash(raw.trim()));
+  return crypto.timingSafeEqual(given, Buffer.from(hash(CLUB_CODE)));
+}
+
+app.get('/healthz', (req, res) => res.json({ ok: true }));
+app.get('/api/config', (req, res) => res.json({ requiresCode: !!CLUB_CODE }));
+
 app.get('/api/photos', (req, res) => {
   const key = ownerKeyOf(req);
   const photos = [...db.photos]
@@ -96,6 +114,7 @@ app.get('/api/photos', (req, res) => {
 });
 
 app.post('/api/photos', (req, res) => {
+  if (!codeOk(req)) return res.status(401).json({ error: '동호회 입장 코드가 맞지 않아요.', code: 'CLUB_CODE' });
   upload.single('photo')(req, res, async (err) => {
     if (err) {
       const msg = err.code === 'LIMIT_FILE_SIZE' ? `사진은 ${MAX_FILE_MB}MB 이하만 가능해요.` : err.message;
@@ -161,5 +180,5 @@ app.delete('/api/photos/:id', async (req, res) => {
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.listen(PORT, () => {
-  console.log(`🥕 당근 사진 마을 전시회가 열렸어요: http://localhost:${PORT}`);
+  console.log(`🥕 당근 사진 마을 전시회가 열렸어요: http://localhost:${PORT} (저장 위치: ${STORAGE_DIR})`);
 });

@@ -1,5 +1,5 @@
 // 오프라인 캐시: 앱 화면 파일은 저장해두고, 사진/데이터는 항상 인터넷에서 새로 받아요.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = [
   './',
   'index.html',

@@ -4,6 +4,6 @@
 //  - SUPABASE_KEY: anon(public) 키 또는 Publishable 키 (공개돼도 괜찮은 키예요. service_role/secret 키는 절대 넣지 마세요!)
 // 둘 다 비워두면 "체험 모드"로 동작해요 (사진이 이 기기에만 저장됨).
 window.APP_CONFIG = {
-  SUPABASE_URL: 'https://effgucbfutzmzxtfiszw.supabase.co',
-  SUPABASE_KEY: 'sb_publishable_oYOaH-0uN75NvWEGy4CS1A_yOvzYCBX',
+  SUPABASE_URL: 'https://onqdptomspokollnsjhx.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_5aA9fAueGwCsulULMiZeig_vAKVQGOH',
 };

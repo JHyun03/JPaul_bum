@@ -150,6 +150,34 @@
         fail(error, '작품을 내리지 못했어요.');
         await sb.storage.from(BUCKET).remove([p.path]);
       },
+      // 지금 마을에 있는 주민 (Supabase Realtime Presence, 로그인 불필요)
+      joinVillage(me, onChange) {
+        const myId = uuid();
+        let state = { ...me };
+        let ready = false;
+        const ch = sb.channel('village', { config: { presence: { key: myId } } });
+        ch.on('presence', { event: 'sync' }, () => {
+          const all = ch.presenceState();
+          const list = Object.entries(all).map(([id, metas]) => ({ ...metas[metas.length - 1], id, self: id === myId }));
+          onChange(list);
+        });
+        ch.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            ready = true;
+            ch.track(state);
+          }
+        });
+        return {
+          update(partial) {
+            state = { ...state, ...partial };
+            if (ready) ch.track(state);
+          },
+          leave() {
+            ch.untrack();
+            sb.removeChannel(ch);
+          },
+        };
+      },
     };
   }
 
@@ -218,6 +246,48 @@
       },
       async remove(p) {
         write(read().filter((x) => x.id !== p.id));
+      },
+      // 체험 모드: 같은 기기의 다른 창끼리만 서로 보여요.
+      joinVillage(me, onChange) {
+        const myId = uuid();
+        let state = { ...me };
+        const peers = new Map();
+        const bc = 'BroadcastChannel' in window ? new BroadcastChannel('carrot-photo-village') : null;
+        const emit = () =>
+          onChange([{ ...state, id: myId, self: true }, ...[...peers.entries()].map(([id, p]) => ({ ...p.state, id }))]);
+        const post = (type) => bc?.postMessage({ type, id: myId, state });
+        if (bc) {
+          bc.onmessage = ({ data }) => {
+            if (data.id === myId) return;
+            if (data.type === 'leave') peers.delete(data.id);
+            else {
+              if (!peers.has(data.id) && data.type === 'state') post('state'); // 새로 온 주민에게 나도 알려주기
+              peers.set(data.id, { state: data.state, at: Date.now() });
+            }
+            emit();
+          };
+        }
+        const timer = setInterval(() => {
+          post('ping');
+          const now = Date.now();
+          let changed = false;
+          for (const [id, p] of peers) if (now - p.at > 12000) changed = peers.delete(id);
+          if (changed) emit();
+        }, 4000);
+        post('state');
+        setTimeout(emit, 0);
+        return {
+          update(partial) {
+            state = { ...state, ...partial };
+            post('state');
+            emit();
+          },
+          leave() {
+            post('leave');
+            clearInterval(timer);
+            bc?.close();
+          },
+        };
       },
     };
   }
